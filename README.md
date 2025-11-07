@@ -1,270 +1,398 @@
-<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a name="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
+# RAG Pipeline with Qdrant and Replicate
 
+A production-ready Retrieval-Augmented Generation (RAG) pipeline that combines vector search, document retrieval, and language model generation to answer questions based on a knowledge base.
 
+## Overview
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+This RAG system uses:
+- **Qdrant** - Vector database for efficient similarity search
+- **Replicate** - API access to embedding models and LLMs
+- **LangChain** - Orchestration and pipeline management
+- **RAGAS** - Evaluation framework for RAG performance metrics
 
+## Architecture
 
+```
+User Query
+    ↓
+Query Embedding (Replicate E5-Large)
+    ↓
+Vector Search (Qdrant)
+    ↓
+Context Retrieval & Ranking
+    ↓
+LLM Generation (Replicate Llama 3)
+    ↓
+Response with Source Attribution
+```
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
+### Key Components
 
-  <h3 align="center">Best-README-Template</h3>
+1. **Embeddings** (`src/embeddings.py`)
+   - Custom LangChain wrapper for Replicate's multilingual-e5-large model
+   - Batch processing for efficient embedding generation
+   - Normalized embeddings for cosine similarity
 
-  <p align="center">
-    An awesome README template to jumpstart your projects!
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
-  </p>
-</div>
+2. **Data Loader** (`src/data_loader.py`)
+   - Loads dataset from Hugging Face
+   - Chunks documents using RecursiveCharacterTextSplitter
+   - Indexes into Qdrant with metadata preservation
 
+3. **RAG Pipeline** (`src/rag_pipeline.py`)
+   - LangChain LCEL-based pipeline
+   - Configurable retrieval parameters
+   - Source attribution in responses
 
+4. **Query Interface** (`src/query_interface.py`)
+   - Interactive CLI mode
+   - Single question mode
+   - Batch processing mode
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+5. **Evaluation** (`src/evaluation.py`)
+   - RAGAS-based metrics (faithfulness, relevancy, precision, recall)
+   - Test set generation and management
+   - Detailed performance reporting
 
-
-
-<!-- ABOUT THE PROJECT -->
-## About The Project
-
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
-
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
-
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
-
-Use the `BLANK_README.md` to get started.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Built With
-
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+## Installation
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+- Python 3.8+
+- Qdrant server (local or cloud)
+- Replicate API account
 
-### Installation
+### Setup
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/your_username_/Project-Name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd RAG-exploration
    ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
+3. **Set up Qdrant**
 
+   **Option A: Docker (Recommended)**
+   ```bash
+   docker run -p 6333:6333 qdrant/qdrant
+   ```
 
-<!-- USAGE EXAMPLES -->
+   **Option B: Qdrant Cloud**
+   - Sign up at https://cloud.qdrant.io
+   - Create a cluster and note the URL and API key
+
+4. **Configure environment**
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` and add your credentials:
+   ```env
+   REPLICATE_API_TOKEN=your_replicate_token_here
+   QDRANT_URL=http://localhost:6333  # or your Qdrant Cloud URL
+   QDRANT_API_KEY=your_qdrant_key_here  # optional for local
+   ```
+
+5. **Get Replicate API Token**
+   - Sign up at https://replicate.com
+   - Go to https://replicate.com/account/api-tokens
+   - Create a token and add it to `.env`
+
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+### 1. Index Documents
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+Load and index the Qdrant documentation dataset:
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+```bash
+python main.py index
+```
 
+To recreate the collection (deletes existing data):
+```bash
+python main.py index --recreate
+```
 
+**What happens:**
+- Downloads dataset from Hugging Face (`atitaarora/qdrant_doc`)
+- Splits documents into 512-token chunks with 50-token overlap
+- Generates embeddings using Replicate's multilingual-e5-large
+- Stores in Qdrant with metadata
 
-<!-- ROADMAP -->
-## Roadmap
+### 2. Query the System
 
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
+**Interactive Mode** (recommended for exploration):
+```bash
+python main.py query
+```
 
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
+Commands in interactive mode:
+- Type your question and press Enter
+- `sources on` - Show source documents
+- `sources off` - Hide source documents
+- `stats` - Show collection statistics
+- `exit` or `quit` - Exit
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**Single Question Mode**:
+```bash
+python main.py query -q "What is Qdrant?"
+```
 
+**Batch Mode** (process multiple questions):
+```bash
+# Create a file with questions (one per line)
+echo "What is Qdrant?" > questions.txt
+echo "How does vector search work?" >> questions.txt
 
+# Process batch
+python main.py query -b questions.txt -o results.json
+```
 
-<!-- CONTRIBUTING -->
+### 3. Evaluate Performance
+
+**Generate a test set**:
+```bash
+python main.py evaluate --generate-test-set --num-questions 10
+```
+
+This creates `test_set.json`. **Review and customize** the questions and ground truth answers.
+
+**Run evaluation**:
+```bash
+python main.py evaluate --test-set test_set.json
+```
+
+**RAGAS Metrics**:
+- **Faithfulness** (>0.80): Responses grounded in retrieved context
+- **Answer Relevancy** (>0.85): Directly addresses the question
+- **Context Precision** (>0.70): Retrieved chunks are relevant
+- **Context Recall** (>0.70): Important information not missed
+
+### 4. Check Statistics
+
+```bash
+python main.py stats
+```
+
+## Configuration
+
+All configuration is in `.env`. Key parameters:
+
+### Embedding Configuration
+```env
+EMBEDDING_MODEL=beautyyuyanli/multilingual-e5-large:...
+EMBEDDING_DIMENSION=1024
+BATCH_SIZE=32
+```
+
+### Text Splitting
+```env
+CHUNK_SIZE=512          # Tokens per chunk
+CHUNK_OVERLAP=50        # Overlap between chunks
+```
+
+### Retrieval
+```env
+TOP_K_CANDIDATES=15     # Number of documents to retrieve
+SCORE_THRESHOLD=0.7     # Minimum similarity score
+```
+
+### Generation
+```env
+LLM_MODEL=meta/meta-llama-3-70b-instruct
+TEMPERATURE=0.2         # Lower = more factual
+MAX_TOKENS=1000         # Response length limit
+```
+
+## Advanced Usage
+
+### Custom Dataset
+
+To use your own dataset, modify `src/data_loader.py`:
+
+```python
+# In DataLoader.load_dataset_from_hf()
+dataset = load_dataset("your-dataset-name", split="train")
+```
+
+Or load from local files:
+```python
+def load_custom_documents(self) -> List[Dict[str, Any]]:
+    documents = []
+    for file in Path("data/").glob("*.txt"):
+        with open(file) as f:
+            documents.append({"text": f.read(), "source": file.name})
+    return documents
+```
+
+### Programmatic Usage
+
+```python
+from src.rag_pipeline import create_rag_pipeline
+
+# Initialize pipeline
+pipeline = create_rag_pipeline()
+
+# Query
+result = pipeline.query("What is Qdrant?", return_sources=True)
+
+print(result['answer'])
+for source in result['sources']:
+    print(f"Source: {source['metadata']}")
+```
+
+### Custom Prompts
+
+Edit the prompt template in `src/rag_pipeline.py`:
+
+```python
+def _create_prompt(self):
+    template = """Your custom prompt here...
+
+    Context: {context}
+    Question: {question}
+    Answer:"""
+    return ChatPromptTemplate.from_template(template)
+```
+
+## Project Structure
+
+```
+RAG-exploration/
+├── config/
+│   └── settings.py          # Configuration management
+├── src/
+│   ├── embeddings.py        # Replicate embeddings wrapper
+│   ├── data_loader.py       # Data loading and indexing
+│   ├── rag_pipeline.py      # RAG pipeline implementation
+│   ├── query_interface.py   # Interactive query interface
+│   └── evaluation.py        # RAGAS evaluation
+├── main.py                  # Main entry point
+├── requirements.txt         # Python dependencies
+├── .env.example            # Environment template
+└── README.md               # This file
+```
+
+## Troubleshooting
+
+### "No module named 'config'"
+
+Ensure you're running from the project root:
+```bash
+cd RAG-exploration
+python main.py query
+```
+
+### "Missing required environment variables"
+
+Copy and configure the environment file:
+```bash
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+### "Error getting embeddings from Replicate"
+
+Check your Replicate API token:
+```bash
+# Test the token
+python -c "import replicate; print(replicate.Client().list_models())"
+```
+
+### "Collection does not exist"
+
+Index documents first:
+```bash
+python main.py index
+```
+
+### RAGAS evaluation fails
+
+RAGAS requires additional configuration for OpenAI API (used internally for evaluation). You can:
+1. Set `OPENAI_API_KEY` environment variable
+2. Or skip evaluation and use the pipeline directly
+
+## Performance Optimization
+
+### Batch Size Tuning
+
+Larger batches = faster embedding but more memory:
+```env
+BATCH_SIZE=64  # Increase if you have sufficient memory
+```
+
+### Retrieval Parameters
+
+Adjust based on your use case:
+```env
+TOP_K_CANDIDATES=20     # More candidates = better recall, slower
+SCORE_THRESHOLD=0.6     # Lower threshold = more results
+```
+
+### Chunk Size
+
+Optimal chunk size depends on your content:
+- **Technical docs**: 512-768 tokens
+- **Conversational**: 256-512 tokens
+- **Long-form**: 768-1024 tokens
+
+## Evaluation Metrics
+
+### Target Scores
+
+| Metric | Target | Description |
+|--------|--------|-------------|
+| Faithfulness | >0.80 | Answers supported by context |
+| Answer Relevancy | >0.85 | Directly addresses question |
+| Context Precision | >0.70 | Relevant chunks ranked high |
+| Context Recall | >0.70 | All relevant info retrieved |
+
+### Improving Scores
+
+- **Low Faithfulness**: Adjust prompt to emphasize grounding
+- **Low Relevancy**: Improve query understanding/reformulation
+- **Low Precision**: Tune retrieval threshold
+- **Low Recall**: Increase TOP_K or improve chunking
+
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions welcome! Areas for improvement:
+- Support for additional embedding models
+- Query expansion and reformulation
+- Re-ranking strategies
+- Multi-modal support (images, tables)
+- Streaming responses
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+MIT License - see LICENSE.txt file for details
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
-## Contact
-
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
-
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
+- **Qdrant** - High-performance vector database
+- **Replicate** - Easy API access to ML models
+- **LangChain** - Powerful RAG orchestration
+- **RAGAS** - Comprehensive RAG evaluation framework
+- **Dataset** - `atitaarora/qdrant_doc` from Hugging Face
 
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
+## Support
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+For issues and questions:
+- Check troubleshooting section above
+- Review configuration in `.env`
+- Check Qdrant and Replicate documentation
+- Open an issue on GitHub
 
+## Roadmap
 
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-[Next-url]: https://nextjs.org/
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[Vue.js]: https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D
-[Vue-url]: https://vuejs.org/
-[Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
-[Angular-url]: https://angular.io/
-[Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
-[Svelte-url]: https://svelte.dev/
-[Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
-[Laravel-url]: https://laravel.com
-[Bootstrap.com]: https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white
-[Bootstrap-url]: https://getbootstrap.com
-[JQuery.com]: https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white
-[JQuery-url]: https://jquery.com 
+- [ ] Add support for multi-query retrieval
+- [ ] Implement hybrid search (vector + keyword)
+- [ ] Add conversation memory
+- [ ] Support for multiple collections
+- [ ] Web UI interface
+- [ ] Docker compose setup
+- [ ] Production deployment guide
