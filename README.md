@@ -1,71 +1,91 @@
 # RAG Pipeline with Qdrant and Replicate
 
-A production-ready Retrieval-Augmented Generation (RAG) pipeline that combines vector search, document retrieval, and language model generation to answer questions based on a knowledge base.
+A production-ready Retrieval-Augmented Generation (RAG) pipeline that combines vector search, document retrieval, and language model generation. Designed to integrate seamlessly with the **Cohere Toolkit** frontend for a complete RAG application.
 
 ## Overview
 
 This RAG system uses:
-- **Qdrant** - Vector database for efficient similarity search
-- **Replicate** - API access to embedding models and LLMs
+- **Qdrant Cloud** - Remote vector database cluster for efficient similarity search
+- **Replicate** - API access to embedding models (multilingual-e5-large) and LLMs (Llama 3)
 - **LangChain** - Orchestration and pipeline management
-- **RAGAS** - Evaluation framework for RAG performance metrics
+- **Cohere Toolkit** - Modern chat-based frontend interface
+
+> **Note**: This system connects to your existing Qdrant cluster. No local database setup required!
 
 ## Architecture
 
+### Full Stack with Cohere Toolkit
+
 ```
-User Query
+User Interface (Cohere Toolkit Frontend)
     ↓
-Query Embedding (Replicate E5-Large)
+FastAPI Backend (Cohere Toolkit)
     ↓
-Vector Search (Qdrant)
+QdrantRAGTool (this integration)
     ↓
-Context Retrieval & Ranking
+RAG Pipeline (this repository)
     ↓
-LLM Generation (Replicate Llama 3)
+┌─────────────────────────────────────┐
+│ Query Embedding (Replicate E5)      │
+│          ↓                           │
+│ Vector Search (Your Qdrant Cluster) │
+│          ↓                           │
+│ Context Retrieval & Ranking          │
+│          ↓                           │
+│ LLM Generation (Replicate Llama 3)  │
+└─────────────────────────────────────┘
     ↓
-Response with Source Attribution
+Response with Source Citations
 ```
 
 ### Key Components
 
 1. **Embeddings** (`src/embeddings.py`)
-   - Custom LangChain wrapper for Replicate's multilingual-e5-large model
+   - Custom LangChain wrapper for Replicate's multilingual-e5-large
    - Batch processing for efficient embedding generation
-   - Normalized embeddings for cosine similarity
+   - Normalized embeddings for cosine similarity search
 
 2. **Data Loader** (`src/data_loader.py`)
-   - Loads dataset from Hugging Face
+   - Loads datasets from Hugging Face
    - Chunks documents using RecursiveCharacterTextSplitter
-   - Indexes into Qdrant with metadata preservation
+   - Indexes into your Qdrant cluster with metadata
 
 3. **RAG Pipeline** (`src/rag_pipeline.py`)
    - LangChain LCEL-based pipeline
+   - Connects to your remote Qdrant cluster
    - Configurable retrieval parameters
    - Source attribution in responses
 
 4. **Query Interface** (`src/query_interface.py`)
-   - Interactive CLI mode
-   - Single question mode
-   - Batch processing mode
+   - Interactive CLI mode for testing
+   - Single question and batch processing modes
+   - Source document display
 
-5. **Evaluation** (`src/evaluation.py`)
-   - RAGAS-based metrics (faithfulness, relevancy, precision, recall)
-   - Test set generation and management
-   - Detailed performance reporting
+5. **Cohere Integration** (`cohere_integration/`)
+   - Cohere Toolkit tool wrapper (`qdrant_rag_tool.py`)
+   - Full integration guide for frontend setup
+   - API-compatible response formatting
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.8+
-- Qdrant server (local or cloud)
-- Replicate API account
+- **Python 3.8+**
+- **Existing Qdrant cluster** (Qdrant Cloud or self-hosted)
+  - Cluster URL (e.g., `https://your-cluster.qdrant.io:6333`)
+  - API key for authentication
+  - Collection name where documents are/will be stored
+- **Replicate API account**
+  - Sign up at https://replicate.com
+  - Get API token from https://replicate.com/account/api-tokens
+- **Cohere Toolkit** (for frontend - optional for standalone use)
+  - Clone from: https://github.com/parzival1l/cohere-toolkit/
 
 ### Setup
 
-1. **Clone the repository**
+1. **Clone this repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/parzival1l/RAG-exploration.git
    cd RAG-exploration
    ```
 
@@ -74,45 +94,42 @@ Response with Source Attribution
    pip install -r requirements.txt
    ```
 
-3. **Set up Qdrant**
-
-   **Option A: Docker (Recommended)**
-   ```bash
-   docker run -p 6333:6333 qdrant/qdrant
-   ```
-
-   **Option B: Qdrant Cloud**
-   - Sign up at https://cloud.qdrant.io
-   - Create a cluster and note the URL and API key
-
-4. **Configure environment**
+3. **Configure environment**
    ```bash
    cp .env.example .env
    ```
 
-   Edit `.env` and add your credentials:
+   Edit `.env` with your credentials:
    ```env
+   # Your Replicate API token
    REPLICATE_API_TOKEN=your_replicate_token_here
-   QDRANT_URL=http://localhost:6333  # or your Qdrant Cloud URL
-   QDRANT_API_KEY=your_qdrant_key_here  # optional for local
+
+   # Your Qdrant cluster details
+   QDRANT_URL=https://your-cluster.qdrant.io:6333
+   QDRANT_API_KEY=your_qdrant_api_key_here
+   COLLECTION_NAME=your_collection_name_here
    ```
 
-5. **Get Replicate API Token**
-   - Sign up at https://replicate.com
-   - Go to https://replicate.com/account/api-tokens
-   - Create a token and add it to `.env`
+4. **Verify configuration**
+   ```bash
+   python main.py stats
+   ```
+
+   This should connect to your Qdrant cluster and show collection statistics.
 
 ## Usage
 
-### 1. Index Documents
+### Standalone Mode (Testing & Development)
 
-Load and index the Qdrant documentation dataset:
+#### 1. Index Documents
+
+If your collection is empty, index the sample Qdrant documentation dataset:
 
 ```bash
 python main.py index
 ```
 
-To recreate the collection (deletes existing data):
+To recreate the collection (⚠️ deletes existing data):
 ```bash
 python main.py index --recreate
 ```
@@ -121,11 +138,11 @@ python main.py index --recreate
 - Downloads dataset from Hugging Face (`atitaarora/qdrant_doc`)
 - Splits documents into 512-token chunks with 50-token overlap
 - Generates embeddings using Replicate's multilingual-e5-large
-- Stores in Qdrant with metadata
+- Stores in your Qdrant cluster with metadata
 
-### 2. Query the System
+#### 2. Query the System
 
-**Interactive Mode** (recommended for exploration):
+**Interactive Mode** (recommended for testing):
 ```bash
 python main.py query
 ```
@@ -152,31 +169,40 @@ echo "How does vector search work?" >> questions.txt
 python main.py query -b questions.txt -o results.json
 ```
 
-### 3. Evaluate Performance
-
-**Generate a test set**:
-```bash
-python main.py evaluate --generate-test-set --num-questions 10
-```
-
-This creates `test_set.json`. **Review and customize** the questions and ground truth answers.
-
-**Run evaluation**:
-```bash
-python main.py evaluate --test-set test_set.json
-```
-
-**RAGAS Metrics**:
-- **Faithfulness** (>0.80): Responses grounded in retrieved context
-- **Answer Relevancy** (>0.85): Directly addresses the question
-- **Context Precision** (>0.70): Retrieved chunks are relevant
-- **Context Recall** (>0.70): Important information not missed
-
-### 4. Check Statistics
+#### 3. Check Collection Statistics
 
 ```bash
 python main.py stats
 ```
+
+Shows your Qdrant collection info, document count, and status.
+
+### Production Mode (with Cohere Toolkit Frontend)
+
+For the full chat interface with UI, integrate with Cohere Toolkit:
+
+1. **Follow the integration guide**:
+   ```bash
+   cat cohere_integration/README.md
+   ```
+
+2. **Quick setup**:
+   ```bash
+   # Copy the tool to Cohere Toolkit
+   cp cohere_integration/qdrant_rag_tool.py <cohere-toolkit>/src/community/tools/
+
+   # Register and configure (see integration guide for details)
+   # Then start Cohere Toolkit
+   cd <cohere-toolkit>
+   make dev
+   ```
+
+3. **Access the UI**:
+   - Open http://localhost:4000
+   - Enable "Qdrant RAG Retriever" in tools
+   - Start chatting with your documents!
+
+📖 **Full integration guide**: See `cohere_integration/README.md` for detailed setup instructions, troubleshooting, and advanced configuration.
 
 ## Configuration
 
@@ -264,17 +290,20 @@ def _create_prompt(self):
 ```
 RAG-exploration/
 ├── config/
-│   └── settings.py          # Configuration management
+│   └── settings.py              # Configuration management
 ├── src/
-│   ├── embeddings.py        # Replicate embeddings wrapper
-│   ├── data_loader.py       # Data loading and indexing
-│   ├── rag_pipeline.py      # RAG pipeline implementation
-│   ├── query_interface.py   # Interactive query interface
-│   └── evaluation.py        # RAGAS evaluation
-├── main.py                  # Main entry point
-├── requirements.txt         # Python dependencies
-├── .env.example            # Environment template
-└── README.md               # This file
+│   ├── embeddings.py            # Replicate embeddings wrapper
+│   ├── data_loader.py           # Data loading and indexing
+│   ├── rag_pipeline.py          # RAG pipeline implementation
+│   ├── query_interface.py       # Interactive query interface
+│   └── evaluation.py            # RAGAS evaluation (banked for later)
+├── cohere_integration/
+│   ├── qdrant_rag_tool.py       # Cohere Toolkit integration
+│   └── README.md                # Integration guide
+├── main.py                      # Main CLI entry point
+├── requirements.txt             # Python dependencies
+├── .env.example                 # Environment template
+└── README.md                    # This file
 ```
 
 ## Troubleshooting
@@ -292,7 +321,7 @@ python main.py query
 Copy and configure the environment file:
 ```bash
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env with your credentials (REPLICATE_API_TOKEN, QDRANT_URL, etc.)
 ```
 
 ### "Error getting embeddings from Replicate"
@@ -300,21 +329,35 @@ cp .env.example .env
 Check your Replicate API token:
 ```bash
 # Test the token
-python -c "import replicate; print(replicate.Client().list_models())"
+python -c "import replicate; print('Token is valid')"
 ```
+
+Or visit: https://replicate.com/account/api-tokens
+
+### Cannot connect to Qdrant cluster
+
+Check your Qdrant configuration:
+```bash
+# Test connection
+curl "https://your-cluster.qdrant.io:6333/collections" \
+  -H "api-key: your_api_key"
+```
+
+Verify:
+- URL includes protocol (`https://`) and port (`:6333`)
+- API key is correct
+- Firewall allows connection
+- For Qdrant Cloud, cluster is active
 
 ### "Collection does not exist"
 
-Index documents first:
-```bash
-python main.py index
-```
+Either:
+1. Index documents: `python main.py index`
+2. Or update `COLLECTION_NAME` in `.env` to match your existing collection
 
-### RAGAS evaluation fails
+### Cohere Toolkit integration issues
 
-RAGAS requires additional configuration for OpenAI API (used internally for evaluation). You can:
-1. Set `OPENAI_API_KEY` environment variable
-2. Or skip evaluation and use the pipeline directly
+See `cohere_integration/README.md` for detailed troubleshooting of frontend integration.
 
 ## Performance Optimization
 
@@ -340,23 +383,20 @@ Optimal chunk size depends on your content:
 - **Conversational**: 256-512 tokens
 - **Long-form**: 768-1024 tokens
 
-## Evaluation Metrics
+## Evaluation
 
-### Target Scores
+RAGAS-based evaluation is available but currently banked for later use. To enable:
 
-| Metric | Target | Description |
-|--------|--------|-------------|
-| Faithfulness | >0.80 | Answers supported by context |
-| Answer Relevancy | >0.85 | Directly addresses question |
-| Context Precision | >0.70 | Relevant chunks ranked high |
-| Context Recall | >0.70 | All relevant info retrieved |
+1. Uncomment evaluation sections in `main.py`
+2. Install OpenAI dependencies (required by RAGAS)
+3. Set `OPENAI_API_KEY` environment variable
+4. Run: `python main.py evaluate --generate-test-set`
 
-### Improving Scores
-
-- **Low Faithfulness**: Adjust prompt to emphasize grounding
-- **Low Relevancy**: Improve query understanding/reformulation
-- **Low Precision**: Tune retrieval threshold
-- **Low Recall**: Increase TOP_K or improve chunking
+For now, you can evaluate the system manually by:
+- Testing with known questions
+- Reviewing source attributions
+- Checking answer accuracy
+- Using the Cohere Toolkit UI for interactive testing
 
 ## Contributing
 
@@ -376,23 +416,36 @@ MIT License - see LICENSE.txt file for details
 - **Qdrant** - High-performance vector database
 - **Replicate** - Easy API access to ML models
 - **LangChain** - Powerful RAG orchestration
-- **RAGAS** - Comprehensive RAG evaluation framework
+- **Cohere Toolkit** - Modern chat interface framework
 - **Dataset** - `atitaarora/qdrant_doc` from Hugging Face
 
 ## Support
 
 For issues and questions:
+
+**RAG Pipeline Issues:**
 - Check troubleshooting section above
 - Review configuration in `.env`
+- Test connection: `python main.py stats`
 - Check Qdrant and Replicate documentation
-- Open an issue on GitHub
+
+**Cohere Integration Issues:**
+- See `cohere_integration/README.md`
+- Check Cohere Toolkit logs: `docker-compose logs backend`
+- Verify tool registration: `curl http://localhost:8000/v1/tools`
+
+**General:**
+- Open an issue on GitHub: https://github.com/parzival1l/RAG-exploration/issues
 
 ## Roadmap
 
+- [x] Qdrant Cloud/remote cluster support
+- [x] Cohere Toolkit frontend integration
+- [x] Replicate embeddings and LLM integration
 - [ ] Add support for multi-query retrieval
 - [ ] Implement hybrid search (vector + keyword)
 - [ ] Add conversation memory
 - [ ] Support for multiple collections
-- [ ] Web UI interface
-- [ ] Docker compose setup
+- [ ] RAGAS evaluation re-enablement
+- [ ] Caching layer for frequent queries
 - [ ] Production deployment guide
